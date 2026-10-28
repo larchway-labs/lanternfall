@@ -139,13 +139,15 @@ function house(P, h, colliders) {
   const rm = m.clone().multiply(M4(0, top, 0, along ? 0 : Math.PI / 2));
   P.add(h.roof, roof(span, len, rise, h.roof === "thatch" ? 0.7 : 0.45), rm);
   P.add(facade, gables(span, len, rise), rm, tint);
+  let chimney = null;
   if (h.chimney) {
     const cx = along ? len * 0.3 : span * 0.15, cz = along ? span * 0.15 : len * 0.3;
     P.add("stone", box(0.9, rise + 1.6, 0.9), m.clone().multiply(M4(cx, top + (rise + 1.6) / 2, cz)));
+    chimney = new THREE.Vector3(cx, top + rise + 1.7, cz).applyMatrix4(m);
   }
   P.add("darkWood", box(1.2, 2.2, 0.15, 1, 1), m.clone().multiply(M4(-h.w * 0.22, 1.1, h.d / 2 + 0.05)));
   colliders.push({ x: h.x, z: h.z, ry: h.ry, hw: h.w / 2 + 0.1, hd: h.d / 2 + 0.1, top: top + rise });
-  return { top: top + rise };
+  return { top: top + rise, chimney };
 }
 
 export function buildTown(town, M) {
@@ -222,10 +224,15 @@ export function buildTown(town, M) {
   }
 
   // Houses, then the three landmarks.
-  for (const h of town.houses) house(P, h, colliders);
+  const chimneys = [];
+  for (const h of town.houses) {
+    const built = house(P, h, colliders);
+    if (built.chimney) chimneys.push(built.chimney);
+  }
   if (town.tavern) {
     const t = town.tavern;
-    house(P, { ...t, floors: 2, roof: "tile", ridge: "x", tint: 3, jetty: true, chimney: true, facade: 1 }, colliders);
+    const built = house(P, { ...t, floors: 2, roof: "tile", ridge: "x", tint: 3, jetty: true, chimney: true, facade: 1 }, colliders);
+    chimneys.push(built.chimney);
     const m = M4(t.x, 0, t.z, t.ry);
     P.add("iron", box(0.08, 0.08, 1.4), m.clone().multiply(M4(t.w * 0.3, 3.4, t.d / 2 + 0.6)));
     P.add("wood", box(0.1, 0.9, 1.0, 1, 1), m.clone().multiply(M4(t.w * 0.3, 2.85, t.d / 2 + 0.9, Math.PI / 2)));
@@ -343,7 +350,7 @@ export function buildTown(town, M) {
     return M[key];
   };
   P.build(mat, group);
-  return { group, colliders, circles, gapHalf };
+  return { group, colliders, circles, gapHalf, chimneys };
 }
 
 // A lantern on an iron post. Lighting one turns up its glass, its glow and
@@ -369,9 +376,13 @@ export function buildLanterns(town, M, scene, glowTexture) {
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0xffb060, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
     glow.scale.setScalar(2.6);
     glow.position.y = 3.45;
-    g.add(post, cage, glass, cap, light, glow);
+    // A drifting ember over a lantern nobody has lit yet, so one can be found in the dark.
+    const beacon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0xffe2a8, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+    beacon.scale.setScalar(0.9);
+    beacon.position.y = 4.5;
+    g.add(post, cage, glass, cap, light, glow, beacon);
     scene.add(g);
-    out.push({ x, z, lit: false, glass, light, glow });
+    out.push({ x, z, lit: false, glass, light, glow, beacon });
   }
   return out;
 }

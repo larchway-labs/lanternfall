@@ -74,6 +74,45 @@ const M = makeMaterials(town.season);
 const world = buildTown(town, M);
 scene.add(world.group);
 const lanterns = buildLanterns(town, M, scene, glowTexture);
+
+// Chimney smoke: a few soft puffs per chimney, rising and thinning on the wind.
+const smoke = (() => {
+  const chimneys = world.chimneys.slice(0, 48);
+  const per = 7, n = chimneys.length * per;
+  const pos = new Float32Array(n * 3), col = new Float32Array(n * 4), age = new Float32Array(n);
+  for (let i = 0; i < n; i++) age[i] = Math.random() * per;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.BufferAttribute(col, 4));
+  const puff = (() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const x = c.getContext("2d");
+    const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, "rgba(255,255,255,0.9)");
+    gr.addColorStop(1, "rgba(255,255,255,0)");
+    x.fillStyle = gr;
+    x.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  })();
+  const m = new THREE.PointsMaterial({ map: puff, size: 2.6, vertexColors: true, transparent: true, depthWrite: false });
+  const points = new THREE.Points(g, m);
+  points.frustumCulled = false;
+  scene.add(points);
+  return { update(dt, shade) {
+    for (let i = 0; i < n; i++) {
+      age[i] += dt;
+      if (age[i] > per) age[i] -= per;
+      const c = chimneys[Math.floor(i / per)], a = age[i];
+      pos[i * 3] = c.x + a * 0.55 + Math.sin(a * 1.3 + i) * 0.25;
+      pos[i * 3 + 1] = c.y + a * 0.9;
+      pos[i * 3 + 2] = c.z + a * 0.25;
+      col[i * 4] = col[i * 4 + 1] = col[i * 4 + 2] = shade;
+      col[i * 4 + 3] = Math.max(0, 0.4 * Math.min(1, a * 2) * (1 - a / per));
+    }
+    g.attributes.position.needsUpdate = g.attributes.color.needsUpdate = true;
+  } };
+})();
 const H = (x, z) => heightAt(town, x, z);
 
 const LINES = (() => {
@@ -116,7 +155,7 @@ const state = {
   lit: 0,
   started: 0,
   foundLamplighter: false,
-  yaw: 0.6, pitch: 0.62, dist: 19,
+  yaw: 0.6, pitch: 0.8, dist: 16,
   vel: new THREE.Vector3(),
 };
 const sunDir = new THREE.Vector3();
@@ -140,15 +179,15 @@ function setTime(h) {
   }
   const lightDir = elev > -2 ? sunDir : new THREE.Vector3(-0.3, 0.8, -0.5).normalize();
   sun.userData.dir = lightDir.clone();
-  hemi.intensity = THREE.MathUtils.lerp(1.15, 0.42, night);
+  hemi.intensity = THREE.MathUtils.lerp(1.45, 0.42, night);
   hemi.color.set(0xc8d6f0).lerp(new THREE.Color(0x4a5a8a), night);
-  hemi.groundColor.set(0x5a4a32).lerp(new THREE.Color(0x0d0d14), night);
+  hemi.groundColor.set(0x8a7652).lerp(new THREE.Color(0x0d0d14), night);
   const fogDay = new THREE.Color(season.fog), fogDusk = new THREE.Color(0xd59a6a), fogNight = new THREE.Color(0x0b1020);
   scene.fog.color.copy(fogDay).lerp(fogDusk, low * (1 - night) * 0.7).lerp(fogNight, night);
   sky.visible = night < 0.98;
   scene.background = fogNight;
   stars.material.opacity = night;
-  renderer.toneMappingExposure = THREE.MathUtils.lerp(0.85, 1.25, night);
+  renderer.toneMappingExposure = THREE.MathUtils.lerp(1.0, 1.25, night);
   for (const f of M.facades) f.emissiveIntensity = night * 1.5 + low * 0.15;
   M.churchGlass.emissiveIntensity = night * 1.2;
   carry.intensity = night * 7;
@@ -185,6 +224,28 @@ addEventListener("pointermove", (e) => {
   drag = { x: e.clientX, y: e.clientY };
 });
 addEventListener("wheel", (e) => { state.dist = THREE.MathUtils.clamp(state.dist + e.deltaY * 0.02, 6, 40); }, { passive: true });
+
+// A thumbstick on the left and an action button on the right, on touch screens.
+const joy = { x: 0, z: 0, id: null, ox: 0, oy: 0 };
+if (matchMedia("(pointer: coarse)").matches) {
+  $("touch").hidden = false;
+  const pad = $("stick"), knob = $("knob");
+  pad.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY;
+    pad.setPointerCapture(e.pointerId);
+  });
+  pad.addEventListener("pointermove", (e) => {
+    if (e.pointerId !== joy.id) return;
+    const dx = e.clientX - joy.ox, dy = e.clientY - joy.oy, d = Math.hypot(dx, dy), k = Math.min(1, d / 50) / (d || 1);
+    joy.x = dx * k; joy.z = dy * k;
+    knob.style.transform = `translate(${joy.x * 40}px, ${joy.z * 40}px)`;
+  });
+  const end = () => { joy.id = null; joy.x = joy.z = 0; knob.style.transform = ""; };
+  pad.addEventListener("pointerup", end);
+  pad.addEventListener("pointercancel", end);
+  $("act").addEventListener("pointerdown", (e) => { e.stopPropagation(); interact(); });
+}
 
 // ---------------------------------------------------------------- movement
 const R = town.radius;
@@ -253,11 +314,12 @@ function move(dt) {
   if (keys.has("KeyD") || keys.has("ArrowRight")) fx += 1;
   if (keys.has("KeyQ")) state.yaw += dt * 1.8;
   if (keys.has("KeyE")) state.yaw -= dt * 1.8;
-  const run = keys.has("ShiftLeft") || keys.has("ShiftRight");
+  if (joy.id !== null) { fx = joy.x; fz = joy.z; }
+  const run = keys.has("ShiftLeft") || keys.has("ShiftRight") || Math.hypot(joy.x, joy.z) > 0.95;
   const len = Math.hypot(fx, fz);
-  const speed = run ? 7.5 : 4.2;
+  const speed = (run ? 7.5 : 4.2) * Math.min(1, len);
   const target = new THREE.Vector3();
-  if (len > 0 && !dialog.open) {
+  if (len > 0.05 && !dialog.open) {
     const sy = Math.sin(state.yaw), cy = Math.cos(state.yaw);
     target.set((fx * cy + fz * sy) / len * speed, 0, (-fx * sy + fz * cy) / len * speed);
   }
@@ -322,6 +384,7 @@ function interact() {
   }
   f.mesh.lookAt(player.position.x, f.mesh.position.y, player.position.z);
   dialog.open = true;
+  dialog.who = f;
   dialog.lines = lines;
   dialog.i = 0;
   $("dialog-name").textContent = `${f.name}, the ${f.role}`;
@@ -503,7 +566,8 @@ function frame(now) {
       }
     }
     camPos.lerpVectors(look, camPos, reach);
-    camera.position.lerp(camPos, Math.min(1, dt * (reach < 1 ? 14 : 6)));
+    if (camera.position.distanceTo(camPos) > 30) camera.position.copy(camPos);   // a jump, not a walk
+    else camera.position.lerp(camPos, Math.min(1, dt * (reach < 1 ? 14 : 6)));
     camera.lookAt(look);
     sun.target.position.set(p.x, 0, p.z);
     const n = nearest();
@@ -514,7 +578,21 @@ function frame(now) {
     if (now - mmLast > 80) { drawMinimap(); mmLast = now; }
   }
   sun.position.copy(sun.target.position).addScaledVector(sun.userData.dir || sunDir, 150);
-  for (const f of folk) animate(f.mesh, dt, 0);
+  for (const f of folk) {
+    if (f.role === "child" && !(dialog.open && dialog.who === f)) {
+      f.angle = (f.angle ?? Math.atan2(f.z, f.x)) + dt * 0.45;
+      const r = 3.4;
+      f.mesh.position.set(Math.cos(f.angle) * r, 0, Math.sin(f.angle) * r);
+      f.mesh.rotation.y = Math.atan2(-Math.sin(f.angle), Math.cos(f.angle));
+      animate(f.mesh, dt, 0.8);
+    } else animate(f.mesh, dt, 0);
+  }
+  for (const l of lanterns) {
+    l.beacon.visible = !l.lit && state.mode !== "title";
+    l.beacon.position.y = 4.5 + Math.sin(now * 0.002 + l.x) * 0.15;
+    l.beacon.material.opacity = 0.35 + 0.25 * Math.sin(now * 0.004 + l.z);
+  }
+  smoke.update(dt, 0.75 - (state.night || 0) * 0.45);
   for (const l of lanterns) if (l.lit) l.light.intensity = l.base * (0.9 + 0.1 * Math.sin(now * 0.013 + l.x) * Math.sin(now * 0.007 + l.z));
   renderer.render(scene, camera);
   requestAnimationFrame(frame);

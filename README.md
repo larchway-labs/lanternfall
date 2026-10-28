@@ -1,6 +1,6 @@
 # Lanternfall
 
-![The market square at dusk](.github/lanternfall.png)
+![Lighting a lantern at night](.github/lanternfall.png)
 
 It is the eve of the Lantern Fair, and every lamp in town has gone dark. Walk
 the streets of a walled medieval town, ask the townsfolk, and light every

@@ -266,9 +266,9 @@ function clothCanvas(colour) {
 }
 
 export const SEASONS = {
-  spring: { grass: "#6f8f45", leaves: [0x7da64a, 0x9cbf5a, 0xe7b9c8], field: ["#7d9b4c", "#8aa456", "#6d8a3e"], snow: 0, fog: 0xc9d4d8 },
-  summer: { grass: "#6a8a3c", leaves: [0x4f7a32, 0x5f8a3a, 0x46702c], field: ["#c9a94a", "#9fae4c", "#b8953e"], snow: 0, fog: 0xd2d8d6 },
-  autumn: { grass: "#7f8443", leaves: [0xc0702a, 0xa8482a, 0xd9a03a, 0x7a7a30], field: ["#a8874a", "#8a6a3a", "#b49a5a"], snow: 0, fog: 0xd6cbb8 },
+  spring: { grass: "#7c9c50", leaves: [0x7da64a, 0x9cbf5a, 0xe7b9c8], field: ["#7d9b4c", "#8aa456", "#6d8a3e"], snow: 0, fog: 0xc9d4d8 },
+  summer: { grass: "#78994a", leaves: [0x4f7a32, 0x5f8a3a, 0x46702c], field: ["#c9a94a", "#9fae4c", "#b8953e"], snow: 0, fog: 0xd2d8d6 },
+  autumn: { grass: "#8a9050", leaves: [0xc0702a, 0xa8482a, 0xd9a03a, 0x7a7a30], field: ["#a8874a", "#8a6a3a", "#b49a5a"], snow: 0, fog: 0xd6cbb8 },
   winter: { grass: "#dfe4e8", leaves: [0x6d5a48, 0x5b4b3c], field: ["#e8ecef", "#dfe4e8", "#e4e8ea"], snow: 1, fog: 0xd8dee4 },
 };
 
@@ -279,7 +279,7 @@ export function makeMaterials(season) {
   M.grass = material(grassCanvas(3, S.grass), { roughness: 1 }, snowy ? 0.6 : 1.2);
   M.cobble = material(cobbleCanvas(5, snowy ? [190, 190, 192] : [128, 118, 104]), { roughness: 0.85 }, 3);
   M.dirt = material(plainCanvas(9, snowy ? "#cfd3d6" : "#8a7457", false), { roughness: 1 }, 1);
-  M.stone = material(stoneCanvas(11), {}, 3.5);
+  M.stone = material(stoneCanvas(11, [176, 166, 148]), {}, 3.5);
   M.wallStone = material(stoneCanvas(12, [160, 152, 138], 10), {}, 3.5);
   M.churchStone = material(stoneCanvas(13, [176, 166, 146], 12), {}, 3);
   M.tile = material(rowsCanvas(17, snowy ? [225, 228, 232] : [150, 72, 48], 14, false), {}, 3);
