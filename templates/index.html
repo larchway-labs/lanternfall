@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<style>
+  :root {
+    --paper: #f4efe4;
+    --paper-deep: #ebe4d4;
+    --ink: #2b2a26;
+    --ink-soft: #6b665b;
+    --rule: #cfc6b2;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); line-height: 1.5; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 56px 24px 80px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 24px;
+           border-bottom: 1px solid var(--ink); padding-bottom: 14px; flex-wrap: wrap; }
+  h1 { font-weight: 400; font-size: 30px; letter-spacing: 0.32em; text-transform: uppercase; margin: 0; }
+  .meta { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); letter-spacing: 0.04em; }
+  .lede { font-style: italic; color: var(--ink-soft); margin: 14px 0 40px; max-width: 60ch; }
+  .label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
+  .hero img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); }
+  .hero .label { margin-bottom: 10px; display: flex; justify-content: space-between; }
+  section { margin-top: 64px; }
+  h2 { font-weight: 400; font-size: 20px; letter-spacing: 0.18em; text-transform: uppercase; margin: 0 0 6px; }
+  .rule { border: 0; border-top: 1px solid var(--rule); margin: 0 0 24px; }
+  form { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: end; }
+  input[type=text] { font: inherit; font-size: 18px; background: transparent; border: 0; border-bottom: 1px solid var(--ink);
+                     padding: 6px 2px; color: var(--ink); width: 100%; }
+  input[type=text]:focus { outline: none; border-bottom-width: 2px; }
+  fieldset { border: 0; padding: 0; margin: 0; display: flex; gap: 6px; }
+  fieldset legend { margin-bottom: 6px; }
+  .swatch input { position: absolute; opacity: 0; }
+  .swatch span { display: inline-block; width: 30px; height: 30px; border: 1px solid var(--rule); cursor: pointer; }
+  .swatch input:checked + span { outline: 1.5px solid var(--ink); outline-offset: 2px; }
+  .swatch input:focus-visible + span { outline: 2px dashed var(--ink); outline-offset: 3px; }
+  button { font: inherit; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; background: var(--ink);
+           color: var(--paper); border: 0; padding: 12px 20px; cursor: pointer; }
+  button:hover { background: #000; }
+  .plates { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 40px 32px; }
+  figure { margin: 0; }
+  figure a { display: block; }
+  figure img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); transition: transform .2s ease; }
+  figure a:hover img { transform: translateY(-2px); }
+  figcaption { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; }
+  figcaption .name { letter-spacing: 0.12em; text-transform: uppercase; font-size: 14px; }
+  .empty { border: 1px dashed var(--rule); padding: 40px; text-align: center; color: var(--ink-soft); font-style: italic; }
+  .empty code, footer code { font-family: var(--mono); font-style: normal; font-size: 13px; background: var(--paper-deep); padding: 2px 6px; }
+  footer { margin-top: 80px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--ink-soft); font-size: 14px; }
+  @media (max-width: 640px) {
+    .page { padding: 32px 16px 56px; }
+    h1 { font-size: 22px; letter-spacing: 0.22em; }
+    form { grid-template-columns: 1fr; }
+    .plates { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>{{ title }}</h1>
+    <span class="meta">{{ plates|length }} plate{{ '' if plates|length == 1 else 's' }} commissioned · surveyed {{ today.date }}</span>
+  </header>
+  <p class="lede">Topographic plates of islands that do not exist. Each one is drawn from a name: the same name is always the same island.</p>
+
+  <div class="hero">
+    <div class="label"><span>Plate of the day</span><span>{{ today.date }}</span></div>
+    <a href="{{ url_for('plate', seed=today.seed, name=today.name, palette=today.palette) }}">
+      <img src="{{ url_for('plate', seed=today.seed, name=today.name, palette=today.palette) }}" alt="Topographic plate of {{ today.name }}">
+    </a>
+  </div>
+
+  <section>
+    <h2>Commission a plate</h2>
+    <hr class="rule">
+    {% if on_toft %}
+    <form method="post" action="{{ url_for('commission') }}">
+      <label>
+        <span class="label">Name the island</span>
+        <input type="text" name="name" maxlength="40" placeholder="Isle of Vesk" required autocomplete="off">
+      </label>
+      <fieldset>
+        <legend class="label">Palette</legend>
+        {% for p in palettes %}
+        <label class="swatch" title="{{ p }}">
+          <input type="radio" name="palette" value="{{ p }}" {{ 'checked' if loop.first }}>
+          <span style="background: {{ {'ink':'#d6c6a6','moss':'#b4c197','dusk':'#c4adc3','ember':'#d6a27f'}[p] }}"></span>
+        </label>
+        {% endfor %}
+      </fieldset>
+      <button type="submit">Survey it</button>
+    </form>
+    {% else %}
+    <p class="empty">Commissioning runs a job, which needs Toft. Deploy this app and the form appears here.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>The atlas</h2>
+    <hr class="rule">
+    {% if plates %}
+    <div class="plates">
+      {% for p in plates %}
+      <figure>
+        <a href="{{ url_for('plate', seed=p.seed, name=p.name, palette=p.palette, detail=p.detail) }}">
+          <img loading="lazy" src="{{ url_for('plate', seed=p.seed, name=p.name, palette=p.palette, detail=p.detail) }}" alt="Topographic plate of {{ p.name }}">
+        </a>
+        <figcaption>
+          <span class="name">{{ p.name }}</span>
+          <span class="label">{{ p.palette }} · run {{ p.run }} · {{ p.by }}</span>
+        </figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty">No plates yet. Commission one above, or from a terminal: <code>toft job run render --param name="Isle of Vesk"</code></p>
+    {% endif %}
+  </section>
+
+  <footer>Every plate here is a run of the <code>render</code> job. The drawings are made on demand from each run's seed.</footer>
+</div>
+</body>
+</html>

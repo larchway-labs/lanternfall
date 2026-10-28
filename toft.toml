@@ -1,0 +1,33 @@
+# Draw one plate. `name` is required, so `toft job run render` asks for it.
+[jobs.render]
+command = "python jobs.py render"
+timeout = "5m"
+memory  = 256
+
+[jobs.render.params.name]
+type     = "string"
+required = true
+help     = "The island's name, printed on the plate"
+
+[jobs.render.params.palette]
+type    = "string"
+default = "ink"
+choices = ["ink", "moss", "dusk", "ember"]
+help    = "The plate's colours"
+
+[jobs.render.params.detail]
+type    = "int"
+default = 12
+help    = "How many contour lines, 4 to 20"
+
+[jobs.render.params.seed]
+type = "int"
+help = "Which island; otherwise one is derived from the name"
+
+# Today's plate, every morning.
+[jobs.plate-of-day]
+command  = "python jobs.py plate-of-day"
+schedule = "0 7 * * *"
+timeout  = "5m"
+memory   = 256
+overlap  = "skip"
