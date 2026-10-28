@@ -1,64 +1,59 @@
-"""The atlas's two jobs.
+"""The game's two jobs.
 
-    python jobs.py render         draw one plate, on request
-    python jobs.py plate-of-day   draw today's plate, on a schedule
+    python jobs.py found            lay out a new town, on request
+    python jobs.py town-of-the-day  lay out today's town, on a schedule
 
-Both print as they go and report progress, which is what `toft job run`
-draws as a live line. The pauses between contours are deliberate: a plate takes
-about a second to draw, which is too quick to watch.
+Both report progress as they go, which `toft job run` draws as a live line.
+The pauses are deliberate: a town takes a fraction of a second to lay out,
+which is too quick to watch.
 """
 
 import datetime
+import json
 import sys
 import time
 
 import toft
 
-import terrain
+import town as towns
 
 
-def draw(name, palette, detail, seed=None):
+def lay_out(name, size, season, seed=None):
     run = toft.run
-    seed = seed if seed is not None else terrain.seed_for(name)
-    run.log(f"surveying {name!r} — seed {seed}, palette {palette}, {detail} contours")
-    run.progress(5, "surveying the terrain")
-    time.sleep(1.5)
+    seed = seed if seed is not None else towns.seed_for(name)
+    run.log(f"founding {name!r}: a {season} {size}, seed {seed}")
+    steps = []
 
-    def on_level(k, total):
-        run.progress(10 + int(80 * k / total), f"tracing contour {k} of {total}")
-        if k == 1:
-            run.log("  coastline traced")
-        elif k == total:
-            run.log(f"  summit ring traced ({total - 1} contours above the sea)")
-        time.sleep(0.6)
+    def on_step(pct, message):
+        steps.append(message)
+        run.progress(pct, message)
+        run.log(f"  {message}")
+        time.sleep(0.9)
 
-    svg = terrain.render(seed, name, palette, detail, on_level=on_level)
-    run.progress(95, "lettering the cartouche")
-    time.sleep(1)
+    layout = towns.generate(seed, size, season, name, on_step=on_step)
+    landmarks = [k for k in ("church", "keep", "tavern") if layout[k]]
+    run.log(f"done: {len(layout['houses'])} houses, {len(layout['lanterns'])} lanterns, "
+            f"{len(layout['gates'])} gates, {', '.join(landmarks)}")
     try:
-        run.write_output(svg)   # `toft job output <run>` downloads it
+        run.write_output(json.dumps(layout))   # `toft job output <run>` downloads it
     except toft.ToftError as exc:
         if exc.code != "no_output":
             raise
-        run.log("  this install keeps no run outputs; the atlas redraws the plate from its seed")
-    facts = terrain.place_facts(seed, terrain.heightmap(seed))
-    run.log(f"done: summit {facts['peak_m']:,} m, {facts['land_pct']}% land, {len(svg) // 1024} KB")
-    run.progress(100, "plate printed")
+    run.progress(100, f"{name} stands")
 
 
-def render():
+def found():
     p = toft.run.params
-    detail = max(4, min(20, int(p.get("detail", 12))))
-    draw(p["name"], p.get("palette", "ink"), detail, p.get("seed"))
+    lay_out(p["name"], p.get("size", "town"), p.get("season", "autumn"), p.get("seed"))
 
 
-def plate_of_day():
+def town_of_the_day():
     run = toft.run
     day = (run.scheduled_for or datetime.datetime.now(datetime.timezone.utc)).date()
-    plate = terrain.plate_of_day(day)
-    run.log(f"the plate for {plate['date']}")
-    draw(plate["name"], plate["palette"], plate["detail"], plate["seed"])
+    t = towns.town_of_the_day(day)
+    run.log(f"the town for {t['date']}")
+    lay_out(t["name"], t["size"], t["season"], t["seed"])
 
 
 if __name__ == "__main__":
-    {"render": render, "plate-of-day": plate_of_day}[sys.argv[1]]()
+    {"found": found, "town-of-the-day": town_of_the_day}[sys.argv[1]]()

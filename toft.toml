@@ -1,32 +1,33 @@
-# Draw one plate. `name` is required, so `toft job run render` asks for it.
-[jobs.render]
-command = "python jobs.py render"
+# Lay out a new town. `name` is required, so `toft job run found` asks for it.
+[jobs.found]
+command = "python jobs.py found"
 timeout = "5m"
 memory  = 256
 
-[jobs.render.params.name]
+[jobs.found.params.name]
 type     = "string"
 required = true
-help     = "The island's name, printed on the plate"
+help     = "The town's name"
 
-[jobs.render.params.palette]
+[jobs.found.params.size]
 type    = "string"
-default = "ink"
-choices = ["ink", "moss", "dusk", "ember"]
-help    = "The plate's colours"
+default = "town"
+choices = ["hamlet", "village", "town", "city"]
+help    = "How big a town"
 
-[jobs.render.params.detail]
-type    = "int"
-default = 12
-help    = "How many contour lines, 4 to 20"
+[jobs.found.params.season]
+type    = "string"
+default = "autumn"
+choices = ["spring", "summer", "autumn", "winter"]
+help    = "The season the game is played in"
 
-[jobs.render.params.seed]
+[jobs.found.params.seed]
 type = "int"
-help = "Which island; otherwise one is derived from the name"
+help = "Which town; otherwise one is derived from the name"
 
-# Today's plate, every morning.
-[jobs.plate-of-day]
-command  = "python jobs.py plate-of-day"
+# Today's town, every morning.
+[jobs.town-of-the-day]
+command  = "python jobs.py town-of-the-day"
 schedule = "0 7 * * *"
 timeout  = "5m"
 memory   = 256
