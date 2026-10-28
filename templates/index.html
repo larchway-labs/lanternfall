@@ -65,7 +65,8 @@
            border: 1px solid var(--edge); background: rgba(22,18,14,0.35); display: grid; place-items: center; }
   #knob { width: 48px; height: 48px; border-radius: 50%; background: rgba(243,234,214,0.55); }
   #act { position: fixed; right: 24px; bottom: 76px; width: 72px; height: 72px; border-radius: 50%; padding: 0; font-size: 22px; letter-spacing: 0; touch-action: none; }
-  @media (pointer: coarse) { #btn-help, #times { bottom: auto; top: 210px; } #btn-help { display: none; } }
+  .controls.touch { display: none; }
+  @media (pointer: coarse) { .controls.keys { display: none; } .controls.touch { display: block; } #btn-help, #times { bottom: auto; top: 210px; } #btn-help { display: none; } }
   #end { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(8,6,4,0.45); padding: 16px; }
   #end .card { max-width: 460px; padding: 30px; text-align: center; }
   #end h2 { font-weight: 400; font-size: 32px; margin: 0 0 10px; letter-spacing: 0.06em; }
@@ -92,7 +93,8 @@
       <button id="btn-play">Begin at dusk</button>
       <button id="btn-wander" class="quiet">Wander freely</button>
     </div>
-    <div class="controls"><kbd>W A S D</kbd> walk &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd><kbd>E</kbd> turn the view &nbsp; <kbd>F</kbd> talk, light</div>
+    <div class="controls keys"><kbd>W A S D</kbd> walk &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd><kbd>E</kbd> turn the view &nbsp; <kbd>F</kbd> talk, light</div>
+    <div class="controls touch">The stick walks, a drag turns the view, and <kbd>F</kbd> talks and lights.</div>
     {% if scores %}
     <details open>
       <summary class="label">Quickest lamplighters in {{ town.name }}</summary>
@@ -137,16 +139,16 @@
     <button class="quiet" data-hour="18.8">Dusk</button>
     <button class="quiet" data-hour="22.5">Night</button>
   </div>
+  <div id="touch" hidden>
+    <div id="stick"><div id="knob"></div></div>
+    <button id="act" aria-label="Talk or light">F</button>
+  </div>
   <button id="btn-help" class="quiet">Keys</button>
   <div id="help" class="panel" hidden>
     <kbd>W A S D</kbd> walk · <kbd>Shift</kbd> run<br>
     <kbd>Q</kbd><kbd>E</kbd> or drag: turn the view · wheel: zoom<br>
     <kbd>F</kbd> talk to someone, light a lantern
   </div>
-</div>
-<div id="touch" hidden>
-  <div id="stick"><div id="knob"></div></div>
-  <button id="act" aria-label="Talk or light">F</button>
 </div>
 <div id="toast" class="panel"></div>
 <div id="end" hidden>

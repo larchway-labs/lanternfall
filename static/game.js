@@ -537,7 +537,8 @@ function frame(now) {
   last = now;
   if (state.mode === "title") {
     titleSpin += dt * 0.04;
-    camPos.set(Math.cos(titleSpin) * (R + 34), R * 0.62, Math.sin(titleSpin) * (R + 34));
+    const far = innerWidth < innerHeight ? 1.7 : 1;
+    camPos.set(Math.cos(titleSpin) * (R + 34) * far, R * 0.62 * far, Math.sin(titleSpin) * (R + 34) * far);
     camera.position.lerp(camPos, 1);
     camera.lookAt(0, 4, 0);
     sun.target.position.set(0, 0, 0);
@@ -599,7 +600,16 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
+function fit() {
+  // A phone held upright sees a narrow slice; widen the lens and step back.
+  const portrait = innerWidth < innerHeight;
+  camera.fov = portrait ? 60 : 45;
+  state.dist = portrait ? 22 : 16;
+  camera.updateProjectionMatrix();
+}
+fit();
 addEventListener("resize", () => {
+  fit();
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
